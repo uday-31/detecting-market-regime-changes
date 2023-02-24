@@ -10,7 +10,7 @@ def get_pct_change(start, end):
     return (end - start) / start
 
 
-def get_dc_data_test(prices: pd.Series, theta: float) -> list[tuple]:
+def get_dc_data_v2(prices: pd.Series, theta: float) -> list[tuple]:
     """
 
     :param prices: prices
@@ -34,9 +34,7 @@ def get_dc_data_test(prices: pd.Series, theta: float) -> list[tuple]:
                 last_high = current_price
                 last_high_time = timestamp
             else:
-                # I have a confirmation point
-                print('Starting Downward Run. Current Price: {:.4f} Last Low: {:.4f} Last High: {:.4f} '.format(
-                    current_price, last_low, last_high))
+                # reached a DC confirmation point
                 ret_val.append((timestamp, current_price, last_high_time, last_high))
                 is_downward_overshoot = True
         elif get_pct_change(last_low, current_price) >= theta:
@@ -47,6 +45,7 @@ def get_dc_data_test(prices: pd.Series, theta: float) -> list[tuple]:
                 last_low = current_price
                 last_low_time = timestamp
             else:
+                # reached a DC confirmation point
                 ret_val.append((timestamp, current_price, last_low_time, last_low))
                 is_upward_overshoot = True
         if last_low > current_price:
