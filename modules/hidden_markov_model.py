@@ -63,7 +63,7 @@ def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Se
     initial_regime = regimes[0]
     total_duration_in_initial_regime = 0
     in_second_regime = False
-    for time, regime in regimes[1:250].items():
+    for time, regime in regimes[1:].items():
         if regime != initial_regime:
             if not in_second_regime:
                 total_duration_in_initial_regime += (time - start).total_seconds()
