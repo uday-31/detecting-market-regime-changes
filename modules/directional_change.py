@@ -20,7 +20,7 @@ def get_pct_change(start, end):
     return (end - start) / start
 
 
-def get_dc_data_v2(prices: pd.Series, theta: float) -> list[tuple]:
+def get_DC_data_v2(prices: pd.Series, theta: float) -> list[tuple]:
     """
 
     :param prices: prices
@@ -28,6 +28,7 @@ def get_dc_data_v2(prices: pd.Series, theta: float) -> list[tuple]:
     :return: Returns a list of tuples. Each tuple is of the form
              (Directional Change Confirmation timestamp, Directional Change Confirmation price,
              Downturn/Upturn time, Downturn/Upturn price)
+             {DCC_time, DCC_Price, EXT_time, EXT_Price}
     """
 
     last_high = last_low = prices[0]
@@ -66,7 +67,7 @@ def get_dc_data_v2(prices: pd.Series, theta: float) -> list[tuple]:
             last_high_time = timestamp
     return ret_val
 
-def get_DC_data(data: pd.Series, theta: float) -> tuple[pd.Series]:
+def get_DC_data(data: pd.Series, theta: float) -> list[tuple]:
     """Returns the Directional Change (DC) data for a given price series.
 
     Args:
@@ -74,7 +75,11 @@ def get_DC_data(data: pd.Series, theta: float) -> tuple[pd.Series]:
         theta (float): threshold
 
     Returns:
-        tuple[pd.Series]: Directional Change Confirmation and Extreme Points (DCC,EXT)
+        # tuple[pd.Series]: Directional Change Confirmation and Extreme Points (DCC,EXT)
+        return: Returns a list of tuples. Each tuple is of the form
+             (Directional Change Confirmation timestamp, Directional Change Confirmation price,
+             Downturn/Upturn time, Downturn/Upturn price)
+             {DCC_time, DCC_Price, EXT_time, EXT_Price}
     """
 
     rets = data.pct_change().dropna().to_numpy() # pct change returns
@@ -112,32 +117,51 @@ def get_DC_data(data: pd.Series, theta: float) -> tuple[pd.Series]:
     DCC = data.iloc[1:].iloc[DCC]
     EXT = data.iloc[1:].iloc[EXT]
 
-    return (DCC,EXT)
+    ans = []
+    for i in range(len(DCC)):
+        ans.append( (DCC.index[i], DCC[i], EXT.index[i], EXT[i]) )
+    return ans
 
-def get_TMV(ext: pd.Series, theta: float) -> pd.Series:
+def get_TMV(DC: list, theta: float) -> pd.Series:
     """Gets the total price movement (TMV), which is the absolute percentage of the price change in a trend, normalized by the threshold.
 
     Args:
-        ext (pd.Series): extreme points
+        DC (list): output of get_DC_data{,_v2}
         theta (float): threshold
 
     Returns:
         pd.Series: total price movement at respective timestamps
     """
+    ext = []
+    idx = []
+
+    for i in range(len(DC)):
+        ext.append( DC[i][3] )
+        idx.append( DC[i][2] )
+
+    ext = pd.Series( data = ext, index = idx )
     return ext.pct_change().dropna()/theta
 
-def get_T(ext: pd.Series) -> pd.Series:
+def get_T(DC: list) -> pd.Series:
     """Gets the time for completion of a TMV trend, in days.
 
     Args:
-        ext (pd.Series): extreme points
+        DC (list): output of get_DC_data{,_v2}
 
     Returns:
         pd.Series: time for completion of trends at respective timestamps
     """
     # extract number of days and hours between extreme points
-    t_ext = pd.Series(ext.index).diff().dropna().apply(lambda x: x.days + (x.seconds//3600)/24)
-    t_ext.index = ext.index[1:]
+
+    ext = []
+    idx = []
+
+    for i in range(len(DC)):
+        ext.append( DC[i][3] )
+        idx.append( DC[i][2] )
+        
+    t_ext = pd.Series(idx).diff().dropna().apply(lambda x: x.days + (x.seconds//3600)/24)
+    t_ext.index = idx[1:]
     return t_ext
 
 def get_R(tmv: pd.Series, T: pd.Series, theta: float) -> pd.Series:
