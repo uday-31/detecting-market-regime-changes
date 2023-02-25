@@ -7,8 +7,8 @@ import pandas as pd
 import yfinance as yf
 import numpy as np
 
-def get_data(tickers, start_date, delta):
-    data = yf.download(tickers, start=start_date, end = '2022-12-31') # time series data
+def get_data(tickers, start_date, delta, end_date = '2022-12-31'):
+    data = yf.download(tickers, start=start_date, end = end_date) # time series data
     df_ts_close = data['Adj Close'].dropna()
     df_ts_open = data['Open'].dropna()
     df_ts_open.index = df_ts_open.index + pd.Timedelta(f'{delta}h') # adjust time
