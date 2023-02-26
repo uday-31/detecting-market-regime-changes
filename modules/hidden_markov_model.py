@@ -34,7 +34,6 @@ def fit_hmm(n_components: int, price: pd.Series, indicator: pd.Series, ticker: s
 
     regimes = pd.Series(model.predict(X))
     regimes.index = indicator.index
-    print(regimes)
 
     regimes = standardize_regime_labels(regimes,verbose=verbose)
 
@@ -63,29 +62,20 @@ def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Se
     """
     start = regimes.index[0]
     initial_regime = regimes[0]
-    prev_regime = regimes[0] # extra
+    prev_regime = regimes[0] 
+    prev_time = regimes.index[0]
     total_duration_in_initial_regime = 0
-    in_second_regime = False
+
     if len(np.unique(regimes)) == 1:
         total_duration_in_initial_regime = (regimes.index[-1] - regimes.index[0]).total_seconds()
     else:
         for time, regime in regimes[1:].items():
-            if regime == prev
-            # if regime != initial_regime:
-            #     if not in_second_regime:
-            #         total_duration_in_initial_regime += (time - start).total_seconds()
-            #         in_second_regime = True
-            # else:
-            #     if in_second_regime:
-            #         start = time
-            #         in_second_regime = False
-
+            if regime == initial_regime:
+                total_duration_in_initial_regime += (time - prev_time).total_seconds()
+            prev_time = time
+            prev_regime = regime
 
     total_duration = (regimes.index[-1] - regimes.index[0]).total_seconds()
-    print(total_duration_in_initial_regime,"*")
-    print(total_duration, '**')
-    print(total_duration_in_initial_regime/total_duration,'$')
-    print(initial_regime,'***')
 
     if verbose:
         print('Total duration of time: {}'.format(total_duration))
