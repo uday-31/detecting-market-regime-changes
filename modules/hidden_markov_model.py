@@ -35,6 +35,8 @@ def fit_hmm(n_components: int, price: pd.Series, indicator: pd.Series, ticker: s
     regimes = pd.Series(model.predict(X))
     regimes.index = indicator.index
 
+    regimes = standardize_regime_labels(regimes)
+
     if plot:
         fig, ax = plt.subplots()
         price.plot(ax=ax, color='black')
@@ -53,7 +55,7 @@ def fit_hmm(n_components: int, price: pd.Series, indicator: pd.Series, ticker: s
 def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Series:
     """
     This is helper function to standardize regime labels. It is based on the assumption
-    that regime 0 is the normal regime and in the long term, the market is mostly in the
+    that regime 1 (index 0) is the normal regime and in the long term, the market is mostly in the
     normal regime.
     :param regimes: A series indicating the regimes and indexed by a datetime
     :param verbose:
@@ -80,10 +82,11 @@ def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Se
 
     if verbose:
         print('Total duration of time: {}'.format(total_duration))
-        print('Total duration spend in Regime {}: {}'.format(initial_regime, total_duration_in_initial_regime))
-        print('Proportion of time spend in Regime {}: {}'.format(initial_regime, total_duration_in_initial_regime / total_duration))
+        print('Total duration spent in Regime {}: {}'.format(initial_regime+1, total_duration_in_initial_regime))
+        print('Proportion of time spent in Regime {}: {}'.format(initial_regime+1, total_duration_in_initial_regime / total_duration))
 
-    if (initial_regime == 0) and ((total_duration_in_initial_regime / total_duration) <= 0.5):
+   # if (initial_regime == 0) and ((total_duration_in_initial_regime / total_duration) <= 0.5):
+    if ((initial_regime == 0) and ((total_duration_in_initial_regime / total_duration) <= 0.5)) or ((initial_regime == 1) and ((total_duration_in_initial_regime / total_duration) >= 0.5)):
         if verbose:
             print('Flipping labels between regimes.')
         regimes = 1 - regimes
