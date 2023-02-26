@@ -122,6 +122,31 @@ def get_DC_data(data: pd.Series, theta: float) -> list[tuple]:
         ans.append( (DCC.index[i], DCC[i], EXT.index[i], EXT[i]) )
     return ans
 
+def get_DCC_EXT( DC: list ) -> tuple( (list, list, list, list) ):
+    """
+    Get the DCC, EXT points with prices at those points and the time
+
+    Args:
+        DC(list): output_of_get_DC_data{,_v2}
+
+    Returns:
+        (list(DCC), list(DCC_time), list(EXT), list(EXT_time))
+    """
+    EXT = []
+    EXT_index = []
+    DCC = []
+    DCC_index = []
+
+    for i in range(len(DC)):
+        DCC.append( DC[i][1] )
+        DCC_index.append( DC[i][0] )
+        EXT.append( DC[i][3] )
+        EXT_index.append( DC[i][2] )
+
+    return (DCC, DCC_index, EXT, EXT_index)
+
+
+
 def get_TMV(DC: list, theta: float) -> pd.Series:
     """Gets the total price movement (TMV), which is the absolute percentage of the price change in a trend, normalized by the threshold.
 
@@ -132,12 +157,7 @@ def get_TMV(DC: list, theta: float) -> pd.Series:
     Returns:
         pd.Series: total price movement at respective timestamps
     """
-    ext = []
-    idx = []
-
-    for i in range(len(DC)):
-        ext.append( DC[i][3] )
-        idx.append( DC[i][2] )
+    _, _, ext, idx = get_DCC_EXT( DC )
 
     ext = pd.Series( data = ext, index = idx )
     return ext.pct_change().dropna()/theta
@@ -153,12 +173,7 @@ def get_T(DC: list) -> pd.Series:
     """
     # extract number of days and hours between extreme points
 
-    ext = []
-    idx = []
-
-    for i in range(len(DC)):
-        ext.append( DC[i][3] )
-        idx.append( DC[i][2] )
+    _, _, ext, idx = get_DCC_EXT( DC )
         
     t_ext = pd.Series(idx).diff().dropna().apply(lambda x: x.days + (x.seconds//3600)/24)
     t_ext.index = idx[1:]
@@ -175,7 +190,7 @@ def get_R(tmv: pd.Series, T: pd.Series, theta: float) -> pd.Series:
     Returns:
         pd.Series: time-adjusted return of DC
     """
-    return tmv*theta/T
+    return tmv*theta/T  
 
 
 if __name__ == '__main__':
