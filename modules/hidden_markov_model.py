@@ -92,4 +92,32 @@ def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Se
         regimes = 1 - regimes
     return regimes
 
+def make_regime_plots(regimes: pd.Series, tmv: pd.Series, T: pd.Series, ticker: str):
+    """Makes the normalized TMV versus normalized T plots, separated by regime.
+
+    Args:
+        regimes (pd.Series): regimes
+        tmv (pd.Series): tmv
+        T (pd.Series): T
+        ticker (str): ticker
+    """
+    
+    regime_df = (pd.DataFrame([regimes, tmv, T]).T)
+    regime_df.columns = ['Regime','TMV','T']
+    regime_df.Regime = regime_df.Regime.astype('category')
+
+    # normalize
+    regime_df[['TMV','T']] = (regime_df[['TMV','T']] - regime_df[['TMV','T']].min())/(regime_df[['TMV','T']].max() - regime_df[['TMV','T']].min())
+    
+    fig, ax = plt.subplots()
+    colors = {0:'grey', 1:'red'}
+    for c in colors:
+        ax.scatter(regime_df[regime_df.Regime == c]['T'], regime_df[regime_df.Regime == c]['TMV'], c=colors[c],label=f'regime {c+1}')
+    
+    ax.set_title(f"Regimes for {ticker}")
+    ax.set_xlabel("normalized T")
+    ax.set_ylabel("normalized TMV")
+    plt.legend()
+    plt.show()
+
 #%%
