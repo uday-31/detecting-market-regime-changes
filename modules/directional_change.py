@@ -41,28 +41,26 @@ def get_DC_data_v2(prices: pd.Series, theta: float) -> list[tuple]:
             is_downward_run = True
             is_upward_run = False
             is_upward_overshoot = False
-            if is_downward_overshoot:
-                last_high = current_price
-                last_high_time = timestamp
-            else:
+            if not is_downward_overshoot:
                 # reached a DC confirmation point
                 ret_val.append((timestamp, current_price, last_high_time, last_high))
                 is_downward_overshoot = True
+            last_high = current_price
+            last_high_time = timestamp
         elif get_pct_change(last_low, current_price) >= theta:
             is_upward_run = True
             is_downward_run = False
             is_downward_overshoot = False
-            if is_upward_overshoot:
-                last_low = current_price
-                last_low_time = timestamp
-            else:
+            if not is_upward_overshoot:
                 # reached a DC confirmation point
                 ret_val.append((timestamp, current_price, last_low_time, last_low))
                 is_upward_overshoot = True
-        if last_low > current_price:
             last_low = current_price
             last_low_time = timestamp
-        if last_high < current_price:
+        if last_low >= current_price:
+            last_low = current_price
+            last_low_time = timestamp
+        if last_high <= current_price:
             last_high = current_price
             last_high_time = timestamp
     return ret_val
