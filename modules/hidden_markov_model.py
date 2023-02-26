@@ -63,15 +63,18 @@ def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Se
     initial_regime = regimes[0]
     total_duration_in_initial_regime = 0
     in_second_regime = False
-    for time, regime in regimes[1:].items():
-        if regime != initial_regime:
-            if not in_second_regime:
-                total_duration_in_initial_regime += (time - start).total_seconds()
-                in_second_regime = True
-        else:
-            if in_second_regime:
-                start = time
-                in_second_regime = False
+    if len(np.unique(regimes)) == 1:
+        total_duration_in_initial_regime = (regimes.index[-1] - regimes.index[0]).total_seconds()
+    else:
+        for time, regime in regimes[1:].items():
+            if regime != initial_regime:
+                if not in_second_regime:
+                    total_duration_in_initial_regime += (time - start).total_seconds()
+                    in_second_regime = True
+            else:
+                if in_second_regime:
+                    start = time
+                    in_second_regime = False
 
     total_duration = (regimes.index[-1] - regimes.index[0]).total_seconds()
 
@@ -80,9 +83,10 @@ def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Se
         print('Total duration spend in Regime {}: {}'.format(initial_regime, total_duration_in_initial_regime))
         print('Proportion of time spend in Regime {}: {}'.format(initial_regime, total_duration_in_initial_regime / total_duration))
 
-    if initial_regime == 0 and (total_duration_in_initial_regime / total_duration) <= 0.5:
+    if (initial_regime == 0) and ((total_duration_in_initial_regime / total_duration) <= 0.5):
         if verbose:
             print('Flipping labels between regimes.')
         regimes = 1 - regimes
     return regimes
+
 #%%
