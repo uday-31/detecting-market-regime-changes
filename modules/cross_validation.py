@@ -48,6 +48,7 @@ class CustomCrossValidation:
             self._pprint(idx, "Training complete.")
             loss = pipeline.trading_metrics
             self._pprint(idx, "Loss: {}".format(loss))
+            loss['parameters'] = params
             self.losses.append(loss)
             if metric is not None:
                 optimum = self._find_optimum_value(loss, metric, minimize, optimum, params)
