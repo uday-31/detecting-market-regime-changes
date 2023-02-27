@@ -82,13 +82,12 @@ class CustomCrossValidation:
 
 class Pipeline:
 
-    def __init__(self, df_ts: pd.DataFrame, type_: str = 'equity',
-                 type_mapper: dict = {'equity': ['^GSPC'], 'bond': ['^IRX'],
-                                      'fx': ['GBP=X']}, start_date: str = "2005-01-01",
-                 train_end: str = "2017-12-31", valid_start: str = "2018-01-01",
-                 valid_end: str = "2019-12-31", test_start: str = "2020-01-01",
-                 theta: float = 0.025, num_regimes: int = 2, trading_day: dict = {'equity': 6.5, 'fx': 12, 'bond': 9},
-                 DC_indicator: str = "R", threshold: float = 0.5, strat: str = "JC1", init_cap: int = 1):
+    def __init__(self, df_ts: pd.DataFrame, type_: str = 'equity', type_mapper: dict = {'equity':['^GSPC'],'bond':['^IRX'],
+                'fx':['GBP=X']}, start_date: str = "2005-01-01",
+                train_end: str = "2017-12-31", valid_start: str = "2018-01-01", 
+                valid_end:str = "2019-12-31", test_start:str = "2020-01-01",
+                theta: float = 0.025, num_regimes: int = 2, trading_day: dict = {'equity':6.5, 'fx':12,'bond':9},
+                DC_indicator: str = "R", threshold: float = 0.5, strat: str = "JC1", init_cap: int = 1, to_test: bool = False, epsilon = 0.5):
 
         """Initializes the pipeline parameters.
 
@@ -108,6 +107,7 @@ class Pipeline:
             threshold (float, optional): What threshold for TMV do we trade
             strat (str, optional): Name of strategy
             init_cap (int, optional): Starting capital for the strategy
+            to_test (bool, optional): Whether we are fitting on the trainging set or testing on test set
         """
         self.df_ts = df_ts
         self.type_ = type_
@@ -130,6 +130,11 @@ class Pipeline:
         self.threshold = threshold  # Threshold for TMV for strategy
         self.strat = strat  # Name for strategy ( 'control' for control strategy, anything else for test strategy)
         self.init_cap = init_cap
+
+        self.to_test = to_test
+        self.regimes_test = {} # Regimes predicted on test set
+        self.trading_metrics_test = {} # Metrics for trading strategy on test set
+        self.epsilon = epsilon # Prob for regime 1
 
     def fit(self, plot: bool = False, verbose: bool = False):
         """Fits the pipeline
@@ -172,10 +177,21 @@ class Pipeline:
         '''Creating labels for validation set using the Naive Bayes Classifier'''
         self.regimes_valid = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1),
                                             self.regimes,
-                                            self.dict_indicators[self.DC_indicator]['valid'].values.reshape(-1, 1))
+                                            self.dict_indicators[self.DC_indicator]['valid'].values.reshape(-1, 1), self.epsilon)
 
         self.regimes_valid = pd.Series(self.regimes_valid, index=self.dict_indicators[self.DC_indicator]['valid'].index)
         self.trading_metrics = ts.get_loss_function_for_pipeline(self.ts['valid'], self.dc['valid'], self.regimes_valid,
                                                                  self.theta, init_cap=self.init_cap, strat=self.strat,
                                                                  threshold=self.threshold)
         self.trading_metrics = self.trading_metrics[self.strat]
+        
+        if( self.to_test ):
+            self.regimes_test = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['test'].values.reshape(-1, 1), self.epsilon)
+            self.regimes_test = pd.Series( self.regimes_test, index = self.dict_indicators[self.DC_indicator]['test'].index )
+            self.trading_metrics_test = ts.get_loss_function_for_pipeline( self.ts['test'], self.dc['test'], self.regimes_test, self.theta, init_cap = self.init_cap, strat = self.strat, threshold = self.threshold)
+            self.trading_metrics_test = self.trading_metrics_test[self.strat]
+
+
+
+    
+        
