@@ -30,6 +30,7 @@ class CustomCrossValidation:
         self.parameter_grid = parameter_grid
         self.is_verbose = verbose
         self.optimal_loss = None
+        self.grid_size = None
 
     def fit(self, data: pd.DataFrame, metric: str = None, minimize: bool = True):
 
@@ -38,14 +39,16 @@ class CustomCrossValidation:
         self.optimal_loss = None
 
         optimum = _initialize_loss(minimize)
-
-        for idx, params in enumerate(ParameterGrid(self.parameter_grid)):
+        parameter_grid = ParameterGrid(self.parameter_grid)
+        self.grid_size = len(parameter_grid)
+        for idx, params in enumerate(parameter_grid):
             pipeline = self.pipeline_class(df_ts=data, **params)
             self._pprint(idx, "Parameters: {}".format(params))
             pipeline.fit()
             self._pprint(idx, "Training complete.")
             loss = pipeline.trading_metrics
             self._pprint(idx, "Loss: {}".format(loss))
+            loss['parameters'] = params
             self.losses.append(loss)
             if metric is not None:
                 optimum = self._find_optimum_value(loss, metric, minimize, optimum, params)
@@ -74,7 +77,7 @@ class CustomCrossValidation:
 
     def _pprint(self, idx, out):
         if self.is_verbose:
-            print("Iteration: {}: {}".format(idx, out))
+            print("Iteration: {} of {}: {}".format(idx + 1, self.grid_size, out))
 
 
 class Pipeline:
@@ -84,7 +87,7 @@ class Pipeline:
                 train_end: str = "2017-12-31", valid_start: str = "2018-01-01", 
                 valid_end:str = "2019-12-31", test_start:str = "2020-01-01",
                 theta: float = 0.025, num_regimes: int = 2, trading_day: dict = {'equity':6.5, 'fx':12,'bond':9},
-                DC_indicator: str = "R", threshold: float = 0.5, strat: str = "JC1", init_cap: int = 1, to_test: bool = False, epsilon = 0.5):
+                DC_indicator: str = "R", threshold: float = 1.0, strat: str = "JC1", init_cap: int = 1, to_test: bool = False, epsilon = 0.5):
 
         """Initializes the pipeline parameters.
 
