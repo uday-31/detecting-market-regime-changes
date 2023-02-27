@@ -43,7 +43,7 @@ class CustomCrossValidation:
 
         for idx, params in enumerate(ParameterGrid(self.parameter_grid)):
             pipeline = self.pipeline_class(df_ts=data, **params)
-            self._pprint(idx, "Parameters: {}".format(idx, params))
+            self._pprint(idx, "Parameters: {}".format(params))
             loss = pipeline.fit()
             # self._pprint(idx, "Training Complete. Evaluating on validation set.")
             # loss = self.loss_function(x_valid, pipeline_out)
