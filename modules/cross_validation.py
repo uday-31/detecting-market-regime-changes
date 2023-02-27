@@ -15,7 +15,8 @@ import hidden_markov_model as hmm
 import trading_strategy as ts
 import logistic_regression as lr
 import svm as svm
-
+import pandas as pd
+from operator import itemgetter
 
 def _initialize_loss(minimize: bool):
     if minimize:
@@ -80,6 +81,24 @@ class CustomCrossValidation:
     def _pprint(self, idx, out):
         if self.is_verbose:
             print("Iteration: {} of {}: {}".format(idx + 1, self.grid_size, out))
+
+    def get_results_in_latex(self, column_mapper: dict):
+        parameter_keys = sorted(list(self.parameter_grid.keys()))
+        loss_keys = sorted(list(self.get_optimal_loss().keys()))
+        loss_keys.remove('parameters')
+        flattened_results = \
+            [list(itemgetter(*parameter_keys)(row['parameters']))
+             + list(itemgetter(*loss_keys)(row)) for row in self.get_losses()]
+        df = pd.DataFrame(data=flattened_results, columns=parameter_keys + loss_keys)
+        df.reset_index(inplace=True)
+        df['index'] += 1
+        df.rename(columns=column_mapper, inplace=True)
+        styler = df.style
+        styler.set_precision(4)
+        return styler.to_latex()
+
+
+
 
 
 class Pipeline:
@@ -215,3 +234,5 @@ class Pipeline:
 
     
         
+
+#%%
