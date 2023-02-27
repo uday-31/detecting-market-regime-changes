@@ -3,7 +3,7 @@
 # model.
 # Author: Rohan Prasad
 ################################################################################
-from typing import Callable
+from typing import Type, Callable
 
 import numpy as np
 import pandas as pd
@@ -21,17 +21,15 @@ def _initialize_loss(minimize: bool):
 
 
 class CustomCrossValidation:
-    def __init__(self, pipeline: Callable, parameter_grid: dict, loss_function: Callable, verbose: bool = False):
+    def __init__(self, pipline_class: Type, parameter_grid: dict, loss_function: Callable, verbose: bool = False):
         self.optimal_parameters = None
         self.losses = None
-        self.pipeline = pipeline
+        self.pipline_class = pipline_class
         self.parameter_grid = parameter_grid
         self.loss_function = loss_function
         self.is_verbose = verbose
 
-    def fit(self, x_train: [pd.DataFrame, pd.Series, np.ndarray], x_valid: [pd.DataFrame, pd.Series, np.ndarray],
-            y_train: [pd.Series, np.ndarray] = None, y_valid: [pd.Series, np.ndarray] = None,
-            metric: str = None, minimize: bool = True):
+    def fit(self, metric: str = None, minimize: bool = True):
 
         self.losses = []
         self.optimal_parameters = None
@@ -39,14 +37,15 @@ class CustomCrossValidation:
         optimum = _initialize_loss(minimize)
 
         for idx, params in enumerate(ParameterGrid(self.parameter_grid)):
+            pipeline = self.pipline_class(**params)
             self._pprint(idx, "Parameters: {}".format(idx, params))
-            pipeline_out = self.pipeline(x_train, y_train, **params)
-            self._pprint(idx, "Training Complete. Evaluating on validation set.")
-            loss = self.loss_function(x_valid, pipeline_out)
-            self._pprint(idx, "Loss: {}".format(loss))
-            self.losses.append(loss)
+            loss = pipeline.fit()
+            # self._pprint(idx, "Training Complete. Evaluating on validation set.")
+            # loss = self.loss_function(x_valid, pipeline_out)
+            self._pprint(idx, "Loss: {}".format(loss.values[0]))
+            self.losses.append(loss.values[0])
             if metric is not None:
-                optimum = self._find_optimum_value(loss, metric, minimize, optimum, params)
+                optimum = self._find_optimum_value(loss.values[0], metric, minimize, optimum, params)
 
     def get_optimal_parameters(self):
         return self.optimal_parameters
