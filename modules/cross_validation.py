@@ -44,13 +44,13 @@ class CustomCrossValidation:
         for idx, params in enumerate(ParameterGrid(self.parameter_grid)):
             pipeline = self.pipeline_class(df_ts=data, **params)
             self._pprint(idx, "Parameters: {}".format(params))
-            loss = pipeline.fit()
-            # self._pprint(idx, "Training Complete. Evaluating on validation set.")
-            # loss = self.loss_function(x_valid, pipeline_out)
-            self._pprint(idx, "Loss: {}".format(loss.values[0]))
-            self.losses.append(loss.values[0])
+            pipeline.fit()
+            self._pprint(idx, "Training complete.")
+            loss = pipeline.trading_metrics
+            self._pprint(idx, "Loss: {}".format(loss))
+            self.losses.append(loss)
             if metric is not None:
-                optimum = self._find_optimum_value(loss.values[0], metric, minimize, optimum, params)
+                optimum = self._find_optimum_value(loss, metric, minimize, optimum, params)
 
     def get_optimal_parameters(self):
         return self.optimal_parameters
