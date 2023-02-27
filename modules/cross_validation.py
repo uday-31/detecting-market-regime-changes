@@ -3,20 +3,16 @@
 # model.
 # Author: Rohan Prasad
 ################################################################################
-from typing import Callable
+from typing import Type
 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
+import NaiveBayesClassifier as nbc
 import directional_change as dc
 import hidden_markov_model as hmm
-import generate_data as gd
-import NaiveBayesClassifier as nbc
 import trading_strategy as ts
-
-from directional_change import get_data, get_DC_data, get_DC_data_v2, get_TMV, get_T, get_R
-from hidden_markov_model import fit_hmm
 
 
 def _initialize_loss(minimize: bool):
@@ -27,28 +23,28 @@ def _initialize_loss(minimize: bool):
 
 
 class CustomCrossValidation:
-    def __init__(self, pipeline: Callable, parameter_grid: dict, loss_function: Callable, verbose: bool = False):
+    def __init__(self, pipeline_class: Type, parameter_grid: dict, verbose: bool = False):
         self.optimal_parameters = None
         self.losses = None
-        self.pipeline = pipeline
+        self.pipeline_class = pipeline_class
         self.parameter_grid = parameter_grid
-        self.loss_function = loss_function
         self.is_verbose = verbose
+        self.optimal_loss = None
 
-    def fit(self, x_train: [pd.DataFrame, pd.Series, np.ndarray], x_valid: [pd.DataFrame, pd.Series, np.ndarray],
-            y_train: [pd.Series, np.ndarray] = None, y_valid: [pd.Series, np.ndarray] = None,
-            metric: str = None, minimize: bool = True):
+    def fit(self, data: pd.DataFrame, metric: str = None, minimize: bool = True):
 
         self.losses = []
         self.optimal_parameters = None
+        self.optimal_loss = None
 
         optimum = _initialize_loss(minimize)
 
         for idx, params in enumerate(ParameterGrid(self.parameter_grid)):
-            self._pprint(idx, "Parameters: {}".format(idx, params))
-            pipeline_out = self.pipeline(x_train, y_train, **params)
-            self._pprint(idx, "Training Complete. Evaluating on validation set.")
-            loss = self.loss_function(x_valid, pipeline_out)
+            pipeline = self.pipeline_class(df_ts=data, **params)
+            self._pprint(idx, "Parameters: {}".format(params))
+            pipeline.fit()
+            self._pprint(idx, "Training complete.")
+            loss = pipeline.trading_metrics
             self._pprint(idx, "Loss: {}".format(loss))
             self.losses.append(loss)
             if metric is not None:
@@ -60,14 +56,19 @@ class CustomCrossValidation:
     def get_losses(self):
         return self.losses
 
+    def get_optimal_loss(self):
+        return self.optimal_loss
+
     def _find_optimum_value(self, loss: dict, metric: str, minimize: bool, optimum: np.float, parameters: dict):
         if minimize:
             if loss[metric] < optimum:
                 self.optimal_parameters = parameters
+                self.optimal_loss = loss
                 return loss[metric]
         else:
             if loss[metric] > optimum:
                 self.optimal_parameters = parameters
+                self.optimal_loss = loss
                 return loss[metric]
         return optimum
 
@@ -75,9 +76,10 @@ class CustomCrossValidation:
         if self.is_verbose:
             print("Iteration: {}: {}".format(idx, out))
 
+
 class Pipeline:
 
-    def __init__(self, type_: str = 'equity', type_mapper: dict = {'equity':['^GSPC'],'bond':['^IRX'],
+    def __init__(self, df_ts: pd.DataFrame, type_: str = 'equity', type_mapper: dict = {'equity':['^GSPC'],'bond':['^IRX'],
                 'fx':['GBP=X']}, start_date: str = "2005-01-01",
                 train_end: str = "2017-12-31", valid_start: str = "2018-01-01", 
                 valid_end:str = "2019-12-31", test_start:str = "2020-01-01",
@@ -87,6 +89,7 @@ class Pipeline:
         """Initializes the pipeline parameters.
 
         Args:
+            df_ts (pd.DataFrame): price dataframe. Pulled from Yahoo Finance.
             type_ (str, optional): Asset class. Defaults to 'equity'. 'equity' or 'fx' or 'bond'
             type_mapper (_type_, optional): Maps the type to tickers. Defaults to {'equity':['^DJI','^GSPC'],'bond':['^TNX', '^IRX'], 'fx':['RUB=X','GBP=X']}.
             start_date (str, optional): Start date for training set. Defaults to "2005-01-01".
@@ -103,7 +106,7 @@ class Pipeline:
             init_cap (int, optional): Starting capital for the strategy
             to_test (bool, optional): Whether we are fitting on the trainging set or testing on test set
         """
-
+        self.df_ts = df_ts
         self.type_ = type_
         self.type_mapper = type_mapper
         self.tickers = type_mapper[type_]
@@ -119,10 +122,10 @@ class Pipeline:
         self.DC_indicator = DC_indicator
         self.dict_indicators = {}
 
-        self.regimes_valid = {} # Regimes predicted on validation set
-        self.trading_metrics = {} # Metrics for trading strategy on validation set
-        self.threshold = threshold # Threshold for TMV for strategy
-        self.strat = strat #Name for strategy ( 'control' for control strategy, anything else for test strategy)
+        self.regimes_valid = {}  # Regimes predicted on validation set
+        self.trading_metrics = {}  # Metrics for trading strategy
+        self.threshold = threshold  # Threshold for TMV for strategy
+        self.strat = strat  # Name for strategy ( 'control' for control strategy, anything else for test strategy)
         self.init_cap = init_cap
 
         self.to_test = to_test
@@ -137,43 +140,47 @@ class Pipeline:
             verbose (bool, optional): Whether debug output has to be printed. Defaults to False.
         """
 
-        df_ts = dc.get_data(self.tickers, self.start_date, self.trading_day[self.type_]/2)
+        # df_ts = dc.get_data(self.tickers, self.start_date, self.trading_day[self.type_]/2)
 
         self.ts = {}
-        self.ts['train'] = df_ts.loc[:self.train_end]
-        self.ts['valid'] = df_ts.loc[self.valid_start:self.valid_end]
-        self.ts['test'] = df_ts.loc[self.test_start:]
-
+        self.ts['train'] = self.df_ts.loc[:self.train_end]
+        self.ts['valid'] = self.df_ts.loc[self.valid_start:self.valid_end]
+        self.ts['test'] = self.df_ts.loc[self.test_start:]
 
         self.dc = {}
-        for cat in ['train','valid','test']:
+        for cat in ['train', 'valid', 'test']:
             self.dc[cat] = dc.get_DC_data_v2(self.ts[cat], self.theta)
 
         self.tmv = {}
         self.T = {}
         self.R = {}
-        for cat in ['train','valid','test']:
+        for cat in ['train', 'valid', 'test']:
             self.tmv[cat], self.T[cat], self.R[cat] = {}, {}, {}
-            self.tmv[cat] = dc.get_TMV(self.dc[cat],self.theta)
+            self.tmv[cat] = dc.get_TMV(self.dc[cat], self.theta)
             self.T[cat] = dc.get_T(self.dc[cat])
-            self.R[cat] = dc.get_R(self.tmv[cat],self.T[cat],self.theta)
-        
+            self.R[cat] = dc.get_R(self.tmv[cat], self.T[cat], self.theta)
+
         self.dict_indicators['R'] = self.R
         self.dict_indicators['T'] = self.T
         self.dict_indicators['TMV'] = self.tmv
-        
+
         self.regimes = {}
 
-        reg, _ = hmm.fit_hmm(self.num_regimes, self.ts['train'], self.dict_indicators[self.DC_indicator]['train'], self.ticker, plot = plot, verbose = verbose)
+        reg, _ = hmm.fit_hmm(self.num_regimes, self.ts['train'], self.dict_indicators[self.DC_indicator]['train'],
+                             self.ticker, plot=plot, verbose=verbose)
         self.regimes = reg
 
         '''Creating labels for validation set using the Naive Bayes Classifier'''
-        self.regimes_valid = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['valid'].values.reshape(-1, 1))
-                
-        self.regimes_valid = pd.Series( self.regimes_valid, index = self.dict_indicators[self.DC_indicator]['valid'].index )
-        self.trading_metrics = ts.get_loss_function_for_pipeline( self.ts['valid'], self.dc['valid'], self.regimes_valid, self.theta, init_cap = self.init_cap, strat = self.strat, threshold = self.threshold)
-        self.trading_metrics = self.trading_metrics[self.strat]
+        self.regimes_valid = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1),
+                                            self.regimes,
+                                            self.dict_indicators[self.DC_indicator]['valid'].values.reshape(-1, 1))
 
+        self.regimes_valid = pd.Series(self.regimes_valid, index=self.dict_indicators[self.DC_indicator]['valid'].index)
+        self.trading_metrics = ts.get_loss_function_for_pipeline(self.ts['valid'], self.dc['valid'], self.regimes_valid,
+                                                                 self.theta, init_cap=self.init_cap, strat=self.strat,
+                                                                 threshold=self.threshold)
+        self.trading_metrics = self.trading_metrics[self.strat]
+        
         if( self.to_test ):
             self.regimes_test = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['test'].values.reshape(-1, 1))
             self.regimes_test = pd.Series( self.regimes_test, index = self.dict_indicators[self.DC_indicator]['test'].index )
@@ -183,3 +190,4 @@ class Pipeline:
 
 
     
+        
