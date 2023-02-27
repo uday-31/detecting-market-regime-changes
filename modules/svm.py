@@ -17,7 +17,7 @@ def train_SVM(X, y):
 
     return: returns a learned SVM Classifier
     """
-    model = make_pipeline(StandardScaler(), SVC(gamma='auto'))
+    model = make_pipeline(StandardScaler(), SVC(probability=True))
     model.fit(X, y)
     return model
 
@@ -40,11 +40,12 @@ def predict_SVM(model, X, epsilon=0.5):
     return: Returns a list of predictions (highest probability) for each test point
     """
     
+    """
     if (epsilon != 0.5):
         ans = np.zeros(len(X))
         probs = get_predict_probs_SVM(model, X)
         return np.where(probs[:, 1] >= epsilon, 1, 0)
-    
+    """
     return model.predict(X)
 
 
