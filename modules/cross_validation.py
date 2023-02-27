@@ -27,12 +27,11 @@ def _initialize_loss(minimize: bool):
 
 
 class CustomCrossValidation:
-    def __init__(self, pipline_class: Type, parameter_grid: dict, loss_function: Callable, verbose: bool = False):
+    def __init__(self, pipeline_class: Type, parameter_grid: dict, verbose: bool = False):
         self.optimal_parameters = None
         self.losses = None
-        self.pipline_class = pipline_class
+        self.pipeline_class = pipeline_class
         self.parameter_grid = parameter_grid
-        self.loss_function = loss_function
         self.is_verbose = verbose
 
     def fit(self, data: pd.DataFrame, metric: str = None, minimize: bool = True):
@@ -43,7 +42,7 @@ class CustomCrossValidation:
         optimum = _initialize_loss(minimize)
 
         for idx, params in enumerate(ParameterGrid(self.parameter_grid)):
-            pipeline = self.pipline_class(df_ts=data, **params)
+            pipeline = self.pipeline_class(df_ts=data, **params)
             self._pprint(idx, "Parameters: {}".format(idx, params))
             loss = pipeline.fit()
             # self._pprint(idx, "Training Complete. Evaluating on validation set.")
