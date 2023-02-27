@@ -224,7 +224,7 @@ def strategy_control(data, init_cap = 1, strat = "JC1", threshold = 0.5):
                 d[asset_cap][i] = d[position][i] * d['price'][i]
                 d[bank_cap][i] = d[bank_cap][i-1]
             elif( ( abs(d[position][i-1]) > 0) ):
-                if( (d['regime'][i-1] == 0) and (d['type'][i] not in ['DCC','EXT_DCC'] ) ):
+                if( (d['type'][i] not in ['DCC','EXT_DCC'] ) ):
                     '''No Action to be taken'''
                     d[position][i] = d[position][i-1]
                     d[asset_cap][i] = d[position][i] * d['price'][i]
