@@ -30,6 +30,7 @@ class CustomCrossValidation:
         self.parameter_grid = parameter_grid
         self.is_verbose = verbose
         self.optimal_loss = None
+        self.grid_size = None
 
     def fit(self, data: pd.DataFrame, metric: str = None, minimize: bool = True):
 
@@ -38,8 +39,9 @@ class CustomCrossValidation:
         self.optimal_loss = None
 
         optimum = _initialize_loss(minimize)
-
-        for idx, params in enumerate(ParameterGrid(self.parameter_grid)):
+        parameter_grid = ParameterGrid(self.parameter_grid)
+        self.grid_size = len(parameter_grid)
+        for idx, params in enumerate(parameter_grid):
             pipeline = self.pipeline_class(df_ts=data, **params)
             self._pprint(idx, "Parameters: {}".format(params))
             pipeline.fit()
@@ -74,7 +76,7 @@ class CustomCrossValidation:
 
     def _pprint(self, idx, out):
         if self.is_verbose:
-            print("Iteration: {}: {}".format(idx, out))
+            print("Iteration: {} of {}: {}".format(idx + 1, self.grid_size, out))
 
 
 class Pipeline:
