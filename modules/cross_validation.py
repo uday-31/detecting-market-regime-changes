@@ -14,6 +14,7 @@ import directional_change as dc
 import hidden_markov_model as hmm
 import trading_strategy as ts
 import logistic_regression as lr
+import svm as svm
 
 
 def _initialize_loss(minimize: bool):
@@ -178,7 +179,7 @@ class Pipeline:
                              self.ticker, plot=plot, verbose=verbose)
         self.regimes = reg
 
-        '''Creating labels for validation set using the Naive Bayes Classifier'''
+        '''Creating labels for validation set using a specified Classifier'''
         if self.model=='naive_bayes':
             self.regimes_valid = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1),
                                                 self.regimes,
@@ -187,6 +188,11 @@ class Pipeline:
             self.regimes_valid = lr.do_all_LR(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1),
                                                 self.regimes,
                                                 self.dict_indicators[self.DC_indicator]['valid'].values.reshape(-1, 1), self.epsilon)
+        elif self.model=='svm':
+            self.regimes_valid = svm.do_all_SVM(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1),
+                                                self.regimes,
+                                                self.dict_indicators[self.DC_indicator]['valid'].values.reshape(-1, 1),
+                                                self.epsilon)
 
         self.regimes_valid = pd.Series(self.regimes_valid, index=self.dict_indicators[self.DC_indicator]['valid'].index)
         self.trading_metrics = ts.get_loss_function_for_pipeline(self.ts['valid'], self.dc['valid'], self.regimes_valid,
@@ -198,7 +204,9 @@ class Pipeline:
             if self.model=='naive_bayes':
                 self.regimes_test = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['test'].values.reshape(-1, 1), self.epsilon)
             elif self.model=='logistic_regression':
-                self.regimes_test = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['test'].values.reshape(-1, 1), self.epsilon)
+                self.regimes_test = lr.do_all_LR(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['test'].values.reshape(-1, 1), self.epsilon)
+            elif self.model=='svm':
+                self.regimes_test = svm.do_all_SVM(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['test'].values.reshape(-1, 1), self.epsilon)
             self.regimes_test = pd.Series( self.regimes_test, index = self.dict_indicators[self.DC_indicator]['test'].index )
             self.trading_metrics_test = ts.get_loss_function_for_pipeline( self.ts['test'], self.dc['test'], self.regimes_test, self.theta, init_cap = self.init_cap, strat = self.strat, threshold = self.threshold)
             self.trading_metrics_test = self.trading_metrics_test[self.strat]
