@@ -87,7 +87,7 @@ class Pipeline:
                 train_end: str = "2017-12-31", valid_start: str = "2018-01-01", 
                 valid_end:str = "2019-12-31", test_start:str = "2020-01-01",
                 theta: float = 0.025, num_regimes: int = 2, trading_day: dict = {'equity':6.5, 'fx':12,'bond':9},
-                DC_indicator: str = "R", threshold: float = 0.5, strat: str = "JC1", init_cap: int = 1, to_test: bool = False, epsilon = 0.5):
+                DC_indicator: str = "R", threshold: float = 1.0, strat: str = "JC1", init_cap: int = 1, to_test: bool = False, epsilon = 0.5):
 
         """Initializes the pipeline parameters.
 
