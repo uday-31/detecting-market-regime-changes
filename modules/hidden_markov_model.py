@@ -23,7 +23,7 @@ def fit_hmm(n_components: int, price: pd.Series, indicator: pd.Series, ticker: s
 
     models, scores = [], []
     for idx in range(10):
-        model = hmm.GaussianHMM(n_components=2, covariance_type="full", n_iter=1000,
+        model = hmm.GaussianHMM(n_components=n_components, covariance_type="full", n_iter=1000,
             random_state=idx)
   
         model.fit(X)
