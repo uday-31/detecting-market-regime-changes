@@ -164,10 +164,7 @@ class Pipeline:
 
         '''Creating labels for validation set using the Naive Bayes Classifier'''
         self.regimes_valid = nbc.do_all_NBC(self.dict_indicators[self.DC_indicator]['train'].values.reshape(-1, 1), self.regimes, self.dict_indicators[self.DC_indicator]['valid'].values.reshape(-1, 1))
-        print( len( self.regimes_valid) )
-        print( len(self.dict_indicators[self.DC_indicator]['valid'].index) )
-        
-        
+                
         self.regimes_valid = pd.Series( self.regimes_valid, index = self.dict_indicators[self.DC_indicator]['valid'].index )
         self.trading_metrics = ts.get_loss_function_for_pipeline( self.ts['valid'], self.dc['valid'], self.regimes_valid, self.theta, init_cap = self.init_cap, strat = self.strat, threshold = self.threshold)
         self.trading_metrics = self.trading_metrics[self.strat]
