@@ -76,7 +76,7 @@ class CustomCrossValidation:
 
 class Pipeline:
 
-    def __init__(self, type_: str = 'equity', type_mapper: dict = {'equity':['^GSPC'],'bond':['^IRX'],
+    def __init__(self, df_ts: pd.DataFrame,type_: str = 'equity', type_mapper: dict = {'equity':['^GSPC'],'bond':['^IRX'],
                 'fx':['GBP=X']}, start_date: str = "2005-01-01",
                 train_end: str = "2017-12-31", valid_start: str = "2018-01-01", 
                 valid_end:str = "2019-12-31", test_start:str = "2020-01-01",
@@ -86,6 +86,7 @@ class Pipeline:
         """Initializes the pipeline parameters.
 
         Args:
+            df_ts (pd.DataFrame): price dataframe. Pulled from Yahoo Finance.
             type_ (str, optional): Asset class. Defaults to 'equity'. 'equity' or 'fx' or 'bond'
             type_mapper (_type_, optional): Maps the type to tickers. Defaults to {'equity':['^DJI','^GSPC'],'bond':['^TNX', '^IRX'], 'fx':['RUB=X','GBP=X']}.
             start_date (str, optional): Start date for training set. Defaults to "2005-01-01".
@@ -101,7 +102,7 @@ class Pipeline:
             strat (str, optional): Name of strategy
             init_cap (int, optional): Starting capital for the strategy
         """
-
+        self.df_ts = df_ts
         self.type_ = type_
         self.type_mapper = type_mapper
         self.tickers = type_mapper[type_]
@@ -120,7 +121,7 @@ class Pipeline:
         self.regimes_valid = {} # Regimes predicted on validation set
         self.trading_metrics = {} # Metrics for trading strategy
         self.threshold = threshold # Threshold for TMV for strategy
-        self.strat = strat #Name for strategy ( 'control' for control strategy, anything else for test strategy)
+        self.strat = strat # Name for strategy ( 'control' for control strategy, anything else for test strategy)
         self.init_cap = init_cap
 
     def fit(self, plot: bool = False, verbose: bool = False):
@@ -131,12 +132,12 @@ class Pipeline:
             verbose (bool, optional): Whether debug output has to be printed. Defaults to False.
         """
 
-        df_ts = dc.get_data(self.tickers, self.start_date, self.trading_day[self.type_]/2)
+        #df_ts = dc.get_data(self.tickers, self.start_date, self.trading_day[self.type_]/2)
 
         self.ts = {}
-        self.ts['train'] = df_ts.loc[:self.train_end]
-        self.ts['valid'] = df_ts.loc[self.valid_start:self.valid_end]
-        self.ts['test'] = df_ts.loc[self.test_start:]
+        self.ts['train'] = self.df_ts.loc[:self.train_end]
+        self.ts['valid'] = self.df_ts.loc[self.valid_start:self.valid_end]
+        self.ts['test'] = self.df_ts.loc[self.test_start:]
 
 
         self.dc = {}
