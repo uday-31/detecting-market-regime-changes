@@ -39,3 +39,16 @@ def predict_NBC( model, X ):
     """
 
     return model.predict(X)
+
+def do_all_NBC(X_train, y_train, X_valid):
+    """
+    Trains a naive bayes model with y_train as regimes after filteration and X_train as one of the three DC indicators
+
+    params-> X_train: One of the three DC indicators, or a time series
+             y_train: Regimes output from hmm model on the training data after filteration
+             X_valid: Validation test for X, same DC indicator as X_train
+    """
+
+    model = train_NBC( X_train, y_train )
+    preds = predict_NBC( model, X_valid )
+    return preds
