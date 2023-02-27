@@ -4,6 +4,7 @@
 ##############################################################################
 import pandas as pd
 import numpy as np
+import modules.generate_data as gd
 
 def sharpe(df):
     return (df.mean()*252/(df.std()*np.sqrt(252)))
@@ -386,3 +387,25 @@ def get_metrics_trading_strategy( data, strategies ):
         ans[strategy]['sharpe'] = get_sharpe( data, 'daily_ret_'+strategy)
     
     return ans
+
+
+def get_loss_function_for_pipeline( data, DC, regimes, theta, init_cap = 1, strat = 'JC1', threshold = 1):
+    """
+    Function to get the loss 
+    Params-> data: Time series( pd.Series ) for the full thing
+             DC: List of tuples for DC indicators ( output for get_DC_data_v2 )
+             regimes: Filtered regimes, output from hmm model (for train, if used) /Naive Bayes Classifier(valid)
+             theta: Theta value for TMV Calculation
+             init_cap: Initial Capital
+             strat: Name of strat, "control" for control strategy and any other string for regime dependent strategy  
+             threshold: threshold for Trading on TMV
+            
+    Returns: A dict of dict with keys (strat, {drawdown, profit, sharpe})
+    """
+    df = gd.generate_dataset_with_columns( data, DC, regimes, theta )
+    if( strat == "control" ):
+        df1 = strategy_control(df, init_cap=init_cap, strat=strat, threshold = threshold)
+    else:      
+        df1 = strategy_regime_dependent(df, init_cap=init_cap, strat=strat, threshold = threshold)
+    
+    return get_metrics_trading_strategy( df1, [strat]  )
