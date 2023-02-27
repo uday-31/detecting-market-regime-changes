@@ -43,11 +43,11 @@ def predict_NBC( model, X, epsilon = 0.5 ):
     if( epsilon != 0.5 ):
         ans = np.zeros(len(X))
         probs = get_predict_probs_NBC( model, X )
-        for i in range(len(probs)):
-            if( probs[i][1] >= epsilon ):
-                ans[i] = 1
-        return ans
-
+        return np.where(probs[:, 1] >= epsilon, 1, 0)
+        # for i in range(len(probs)):
+        #     if probs[i][1] >= epsilon:
+        #         ans[i] = 1
+        # return ans
 
     return model.predict(X)
 
