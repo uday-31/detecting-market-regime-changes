@@ -106,7 +106,7 @@ def make_regime_plots(regimes: pd.Series, tmv: pd.Series, T: pd.Series, ticker: 
     # normalize
     regime_df[['TMV','T']] = (regime_df[['TMV','T']] - regime_df[['TMV','T']].min())/(regime_df[['TMV','T']].max() - regime_df[['TMV','T']].min())
     
-    fig, ax = plt.subplots(figsize=(16,8))
+    fig, ax = plt.subplots(figsize=(10,5))
     colors = {0:'grey', 1:'red'}
     for c in colors:
         ax.scatter(regime_df[regime_df.Regime == c]['T'], regime_df[regime_df.Regime == c]['TMV'], c=colors[c],label=f'regime {c+1}')
