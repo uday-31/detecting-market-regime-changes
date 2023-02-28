@@ -11,7 +11,7 @@ def train_LR(X, y):
 
     comments: Right now we are only considering gaussian kernels
     """
-    model = LogisticRegression()
+    model = LogisticRegression(penalty='none')
     model.fit( X, y )
     return model
 
