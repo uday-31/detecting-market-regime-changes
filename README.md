@@ -1,4 +1,4 @@
-# detecting-regime-change
+# detecting-market-regime-changes
 
 Use hidden Markov models to label regimes on S&P 500 data, then trained three classifiers (naive Bayes, logistic regression, and support vector machines) to predict regimes with the intent of improving an existing trading strategy.
 
