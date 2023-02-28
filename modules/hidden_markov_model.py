@@ -79,8 +79,8 @@ def standardize_regime_labels(regimes: pd.Series, verbose: bool = True) -> pd.Se
 
     if verbose:
         print('Total duration of time: {}'.format(total_duration))
-        print('Total duration spent in Regime {}: {}'.format(initial_regime+1, total_duration_in_initial_regime))
-        print('Proportion of time spent in Regime {}: {}'.format(initial_regime+1, total_duration_in_initial_regime / total_duration))
+        print('Total duration spent in Regime {}: {}'.format(initial_regime, total_duration_in_initial_regime))
+        print('Proportion of time spent in Regime {}: {}'.format(initial_regime, total_duration_in_initial_regime / total_duration))
 
    # if (initial_regime == 0) and ((total_duration_in_initial_regime / total_duration) <= 0.5):
     if ((initial_regime == 0) and ((total_duration_in_initial_regime / total_duration) <= 0.5)) or ((initial_regime == 1) and ((total_duration_in_initial_regime / total_duration) >= 0.5)):
@@ -109,7 +109,7 @@ def make_regime_plots(regimes: pd.Series, tmv: pd.Series, T: pd.Series, ticker: 
     fig, ax = plt.subplots(figsize=(10,5))
     colors = {0:'grey', 1:'red'}
     for c in colors:
-        ax.scatter(regime_df[regime_df.Regime == c]['T'], regime_df[regime_df.Regime == c]['TMV'], c=colors[c],label=f'regime {c+1}')
+        ax.scatter(regime_df[regime_df.Regime == c]['T'], regime_df[regime_df.Regime == c]['TMV'], c=colors[c],label=f'regime {c}')
     
     ax.set_title(f"Regimes for {ticker} on the {set_} set")
     ax.set_xlabel("normalized T")
