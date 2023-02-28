@@ -34,12 +34,14 @@ class CustomCrossValidation:
         self.is_verbose = verbose
         self.optimal_loss = None
         self.grid_size = None
+        self.metric = None
 
     def fit(self, data: pd.DataFrame, metric: str = None, minimize: bool = True):
 
         self.losses = []
         self.optimal_parameters = None
         self.optimal_loss = None
+        self.metric = metric
 
         optimum = _initialize_loss(minimize)
         parameter_grid = ParameterGrid(self.parameter_grid)
@@ -82,20 +84,31 @@ class CustomCrossValidation:
         if self.is_verbose:
             print("Iteration: {} of {}: {}".format(idx + 1, self.grid_size, out))
 
-    def get_results_in_latex(self, column_mapper: dict):
-        parameter_keys = sorted(list(self.parameter_grid.keys()))
-        loss_keys = sorted(list(self.get_optimal_loss().keys()))
-        loss_keys.remove('parameters')
+    def get_results_in_latex(self, caption = None, loss_columns: list = None, parameter_columns: list = None):
+        if parameter_columns is None:
+            parameter_columns = list(self.parameter_grid.keys())
+        if loss_columns is None:
+            loss_columns = list(self.get_optimal_loss().keys())
+            loss_columns.remove('parameters')
+        parameter_columns = sorted(parameter_columns)
+        loss_columns = sorted(loss_columns)
         flattened_results = \
-            [list(itemgetter(*parameter_keys)(row['parameters']))
-             + list(itemgetter(*loss_keys)(row)) for row in self.get_losses()]
-        df = pd.DataFrame(data=flattened_results, columns=parameter_keys + loss_keys)
+            [list(itemgetter(*parameter_columns)(row['parameters']))
+             + list(itemgetter(*loss_columns)(row)) for row in self.get_losses()]
+        df = pd.DataFrame(data=flattened_results, columns=parameter_columns + loss_columns)
         df.reset_index(inplace=True)
         df['index'] += 1
-        df.rename(columns=column_mapper, inplace=True)
+        df.rename(columns={'index': 'Iterations', 'DC_indicator': 'dc indicator'}, inplace=True)
         styler = df.style
         styler.set_precision(4)
-        return styler.to_latex()
+        styler.hide_index()
+        styler.highlight_max(color='red', axis=0, subset=self.metric)
+        ret_val = styler.to_latex(hrules=True,
+                                  environment='longtable',
+                                  column_format='c' * df.columns.__len__(),
+                                  caption=caption)
+        ret_val = ret_val.replace('\\background-colorred', '\cellcolor{red}')
+        return ret_val
 
 
 
