@@ -240,6 +240,74 @@ def strategy_control(data, init_cap = 1, strat = "JC1", threshold = 0.5):
         
     return d     
 
+def strategy_control2(data, init_cap = 1, strat = "control2", threshold = 0.5):
+    """
+    Momentum trading all the time.
+    It returns a dataframe after implementing JC1 strategy which is based on regime change
+    We get new columns at every time which are: position, asset capital, bank capital, total capital and returns
+
+    TODO: We assume that open to close and close to open times are same, useful in sharpe calculation
+
+    params-> data: Output of gd.generate_dataset_with_columns or any other strategy
+             init_cap: Inital capital in the strategy
+             strat = Name of strat for adding columns
+             threshold: When to take buy/sell decisions
+    
+    returns-> pd.DataFrame which has columns appended to data
+                'daily_ret_strat', 'position_strat', 'asset_cap_strat', 'bank_cap_strat', 'total_cap_strat'
+    """
+
+    '''All values are after trading'''
+    position = 'position_'+strat # Position in asset at this time
+    daily_ret = 'daily_ret_'+strat # Return on total_cap
+    asset_cap = 'asset_cap_'+strat # Price of assets I have
+    bank_cap = 'bank_cap_'+strat # Capital which I don't have invested
+    total_cap = 'total_cap_'+strat # Sum of above two
+
+    d = data.copy()
+
+    d[daily_ret] = 0
+    d[position] = 0 
+    d[asset_cap] = 0
+    d[bank_cap] = 0
+    d[bank_cap][0] = init_cap
+    d[total_cap] = d[bank_cap]
+
+    for i in range( 1,len(d) ):
+        if( d['regime'][i] == -1 ):
+            '''Don't do anything, regime detection has not started'''
+            d[position][i] = d[position][i-1]
+            d[asset_cap][i] = d[asset_cap][i-1]
+            d[bank_cap][i] = d[bank_cap][i-1]
+        
+        else:
+            if( (d[position][i-1] == 0) and (abs(d['TMV'][i]) >= threshold ) ):
+                '''I go against the market with all my money'''
+                d[position][i] = np.sign(d['TMV'][i]) * d[total_cap][i-1] / d['price'][i]
+                d[asset_cap][i] = d[position][i] * d['price'][i]
+                d[bank_cap][i] = d[total_cap][i-1] - d[asset_cap][i]
+            elif( (d[position][i-1] == 0) and (abs(d['TMV'][i]) < threshold ) ):
+                '''No position and threshold not crossed'''
+                d[position][i] = d[position][i-1]
+                d[asset_cap][i] = d[position][i] * d['price'][i]
+                d[bank_cap][i] = d[bank_cap][i-1]
+            elif( ( abs(d[position][i-1]) > 0) ):
+                if( (d['type'][i] not in ['DCC','EXT_DCC'] ) ):
+                    '''No Action to be taken'''
+                    d[position][i] = d[position][i-1]
+                    d[asset_cap][i] = d[position][i] * d['price'][i]
+                    d[bank_cap][i] = d[bank_cap][i-1]
+                else:
+                    '''I take the opposite position here'''
+    #                 d['debug'][i] = 'Hello'
+                    d[position][i] = 0
+                    d[asset_cap][i] = 0
+                    d[bank_cap][i] = abs(d[position][i-1]) * d['price'][i]
+        d[total_cap][i] = d[bank_cap][i] + d[asset_cap][i]
+        d[daily_ret][i] = (d[total_cap][i] - d[total_cap][i-1])/d[total_cap][i-1]
+        
+    return d     
+
     #     init_cap = 1
     # strat = 'JC2'
 
@@ -405,7 +473,9 @@ def get_loss_function_for_pipeline( data, DC, regimes, theta, init_cap = 1, stra
     df = gd.generate_dataset_with_columns( data, DC, regimes, theta )
     if( strat == "control" ):
         df1 = strategy_control(df, init_cap=init_cap, strat=strat, threshold = threshold)
-    else:      
+    elif( strat == "control2"):
+        df1 = strategy_control2(df, init_cap=init_cap, strat=strat, threshold = threshold)
+    else:
         df1 = strategy_regime_dependent(df, init_cap=init_cap, strat=strat, threshold = threshold)
     
     return get_metrics_trading_strategy( df1, [strat]  )
